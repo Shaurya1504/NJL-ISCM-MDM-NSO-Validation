@@ -23,7 +23,6 @@ SMC cols carried through (15 total):
 
 import sys, os, io, time, tempfile
 import openpyxl
-import pandas as pd
 import pyarrow.parquet as pq
 from openpyxl.styles      import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils       import get_column_letter
@@ -51,39 +50,45 @@ SMC_COL_COUNT = 15
 
 # ── SMC loader (parquet-first, xlsx fallback) ─────────────────────────────────
 
-def _smc_from_df(df):
+def _smc_from_table(table):
     """
-    Convert a DataFrame (built from parquet or xlsx) into the dicts
-    expected by run_lookup.  Returns (smc_header, by_set, by_child).
+    Convert a PyArrow Table into (smc_header, by_set, by_child).
+
+    Works column-by-column via to_pydict() so we never hold a full
+    pandas DataFrame in memory — critical for Render's 512 MB free tier.
 
     Parquet schema (15 cols, 0-based):
-      0  set_code
-      1  set_active
-      2  linenum
-      3  itemid                              ← Child Code
-      4  child_active_set_membership
-      5  child_inactive_set_membership
-      6  row_type                            ← Type
-      7  child_status
-      8  child_searchname
-      9  alt_code
-      10 alt_status
-      11 alt_set_membership
-      12 pwc_itemstage                       ← NEW
-      13 itemmodelgroupid                    ← NEW
-      14 defaultledgerdimensiondisplayvalue  ← NEW
+      0  set_code                            1  set_active         2  linenum
+      3  itemid (Child Code)                 4  child_active_set_membership
+      5  child_inactive_set_membership       6  row_type (Type)    7  child_status
+      8  child_searchname                    9  alt_code          10  alt_status
+      11 alt_set_membership                 12  pwc_itemstage     13  itemmodelgroupid
+      14 defaultledgerdimensiondisplayvalue
     """
-    keep = SMC_COL_COUNT
-    smc_header = list(df.columns[:keep])
+    keep       = SMC_COL_COUNT
+    all_cols   = table.column_names
+    smc_header = all_cols[:keep]
+
+    # Pull only the columns we need as plain Python lists — one allocation,
+    # then the table itself can be GC'd.
+    col_data = []
+    for i in range(keep):
+        col = table.column(i) if i < len(all_cols) else None
+        if col is not None:
+            col_data.append([
+                '' if v is None else str(v).strip()
+                for v in col.to_pylist()
+            ])
+        else:
+            col_data.append([''] * table.num_rows)
+
+    del table  # free the Arrow memory immediately
 
     by_set   = defaultdict(list)
     by_child = defaultdict(list)
 
-    for _, row in df.iterrows():
-        r = [row.iloc[i] if i < len(row) else None for i in range(keep)]
-        # normalise pandas NA / float NaN to ''
-        r = ['' if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v).strip() for v in r]
-
+    for row_idx in range(len(col_data[0])):
+        r          = [col_data[c][row_idx] for c in range(keep)]
         set_code   = r[0]
         child_code = r[3]
         if set_code:
@@ -92,6 +97,13 @@ def _smc_from_df(df):
             by_child[child_code].append(r)
 
     return smc_header, by_set, by_child
+
+
+def _smc_from_df(df):
+    """Thin shim for the xlsx fallback path (df is already built, keep it small)."""
+    import pyarrow as pa
+    table = pa.Table.from_pandas(df, preserve_index=False)
+    return _smc_from_table(table)
 
 
 def load_smc(path_or_url=None):
@@ -112,8 +124,8 @@ def load_smc(path_or_url=None):
     # ── caller passed a local parquet path ───────────────────────────────────
     if path_or_url and os.path.isfile(path_or_url) and path_or_url.endswith(".parquet"):
         print(f"  Loading SMC from local parquet: {path_or_url}")
-        df = pd.read_parquet(path_or_url)
-        return _smc_from_df(df)
+        table = pq.read_table(path_or_url)
+        return _smc_from_table(table)
 
     # ── try Azure / env-var URL ───────────────────────────────────────────────
     azure_url = (
@@ -127,17 +139,20 @@ def load_smc(path_or_url=None):
         print(f"  Fetching SMC from Azure: {azure_url}")
         with urllib.request.urlopen(azure_url, timeout=60) as resp:
             data = resp.read()
-        df = pd.read_parquet(io.BytesIO(data))
-        print(f"  SMC loaded from Azure ({len(df):,} rows, {len(df.columns)} cols)")
-        return _smc_from_df(df)
+        # Read directly into Arrow — never builds a pandas DataFrame
+        table = pq.read_table(io.BytesIO(data))
+        nrows = table.num_rows
+        del data   # free the raw bytes immediately before building index dicts
+        print(f"  SMC loaded from Azure ({nrows:,} rows, {table.num_columns} cols)")
+        return _smc_from_table(table)
     except Exception as e:
         print(f"  Azure fetch failed ({e}), trying local files…")
 
     # ── try local parquet ─────────────────────────────────────────────────────
     if os.path.isfile(local_parquet):
         print(f"  Loading SMC from local parquet: {local_parquet}")
-        df = pd.read_parquet(local_parquet)
-        return _smc_from_df(df)
+        table = pq.read_table(local_parquet)
+        return _smc_from_table(table)
 
     # ── fallback: local xlsx ──────────────────────────────────────────────────
     if path_or_url and os.path.isfile(path_or_url) and path_or_url.endswith(".xlsx"):
