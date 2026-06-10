@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PR Validation — Aditya Birla Jewellery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <style>
+    /* ── tokens ─────────────────────────────────────────────────── */
+    :root {
+      --gold:       #B8860B;
+      --gold-light: #D4A843;
+      --gold-pale:  #FBF4E3;
+      --navy:       #1A2744;
+      --navy-mid:   #263559;
+      --ink:        #1C1C1E;
+      --muted:      #6B7080;
+      --border:     #E2D9C8;
+      --bg:         #F8F5EF;
+      --white:      #FFFFFF;
+      --success:    #1A6640;
+      --error:      #C0392B;
+      --warn-bg:    #FFF8E1;
+      --radius:     10px;
+      --shadow:     0 2px 16px rgba(26,39,68,.10);
+      --shadow-lg:  0 8px 40px rgba(26,39,68,.14);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── top bar ─────────────────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      padding: 0 40px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      color: var(--white);
+      font-size: 16px;
+      font-weight: 400;
+      letter-spacing: .5px;
+    }
+    .logo-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: #CBD5E1;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+    }
+    .logo-sub {
+      font-size: 11px;
+      color: #64748B;
+      letter-spacing: .4px;
+    }
+    .header-badge {
+      font-size: 11px;
+      color: var(--gold-light);
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    /* ── page layout ─────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 560px;
+      overflow: hidden;
+    }
+
+    /* ── card header ─────────────────────────────────────────────── */
+    .card-head {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      padding: 32px 36px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-head::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; right: -30px;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: rgba(212,168,67,.07);
+      pointer-events: none;
+    }
+    .card-head h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--white);
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .card-head h1 span { color: var(--gold-light); }
+    .card-head p {
+      font-size: 13px;
+      color: #94A3B8;
+      line-height: 1.6;
+      max-width: 380px;
+    }
+
+    /* ── card body ───────────────────────────────────────────────── */
+    .card-body { padding: 32px 36px; }
+
+    /* ── advisory notice ─────────────────────────────────────────── */
+    .advisory-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--gold-pale);
+      border: 1px solid #E0C97A;
+      border-left: 4px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 24px;
+    }
+    .advisory-notice .adv-icon { flex-shrink: 0; color: var(--gold); margin-top: 1px; }
+    .advisory-notice .adv-text { font-size: 12.5px; color: #5C4500; line-height: 1.55; }
+    .advisory-notice .adv-text strong {
+      font-weight: 600; display: block; margin-bottom: 2px;
+      font-size: 12px; letter-spacing: .2px;
+    }
+
+    /* ── format-error overlay ────────────────────────────────────── */
+    .fmt-error-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .fmt-error-overlay.visible { display: flex; }
+    .fmt-error-box {
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      padding: 36px 32px 28px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      animation: popIn .22s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .fmt-error-box .err-badge {
+      width: 56px; height: 56px;
+      background: #FEE2E2;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .fmt-error-box .err-badge svg { color: var(--error); }
+    .fmt-error-box h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px; font-weight: 400;
+      color: var(--error);
+      margin-bottom: 10px;
+    }
+    .fmt-error-box p {
+      font-size: 13px; color: var(--muted);
+      line-height: 1.6; margin-bottom: 22px;
+    }
+    .fmt-error-box .btn-dismiss {
+      padding: 10px 28px;
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 600;
+      border: none; border-radius: 8px;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .fmt-error-box .btn-dismiss:hover { opacity: .85; }
+
+    /* ── drop zone ───────────────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--gold);
+      background: var(--gold-pale);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon {
+      width: 44px; height: 44px;
+      background: var(--gold-pale);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+      transition: background .2s;
+    }
+    .drop-icon svg { color: var(--gold); }
+    .drop-zone:hover .drop-icon, .drop-zone.drag-over .drop-icon {
+      background: #F0E0B0;
+    }
+    .drop-zone .primary-text {
+      font-size: 14px; font-weight: 500; color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .drop-zone .secondary-text {
+      font-size: 12px; color: var(--muted);
+    }
+
+    /* ── file pill (shown after selection) ───────────────────────── */
+    .file-pill {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: #EEF4FF;
+      border: 1px solid #BFCFEE;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+    }
+    .file-pill.visible { display: flex; }
+    .file-pill .file-name {
+      font-size: 13px; font-weight: 500; color: var(--navy);
+      flex: 1; min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-pill .remove-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 18px; line-height: 1;
+      padding: 0 2px; transition: color .15s;
+    }
+    .file-pill .remove-btn:hover { color: var(--error); }
+
+    /* ── process button ──────────────────────────────────────────── */
+    .btn-process {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .5px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-process:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .btn-process:active:not(:disabled) { transform: translateY(0); }
+    .btn-process:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── progress section ────────────────────────────────────────── */
+    .progress-section {
+      display: none;
+      margin-top: 22px;
+    }
+    .progress-section.visible { display: block; }
+    .progress-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .progress-track {
+      height: 6px;
+      background: #EDE8DF;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 99px;
+      width: 0%;
+      transition: width .4s ease;
+    }
+    .progress-steps {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      opacity: .4;
+      transition: opacity .3s;
+    }
+    .step.active   { opacity: 1; color: var(--ink); }
+    .step.done     { opacity: 1; color: var(--success); }
+    .step-dot {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 9px;
+    }
+    .step.active .step-dot {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--white);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .step.done .step-dot {
+      background: var(--success);
+      border-color: var(--success);
+      color: var(--white);
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(184,134,11,.35); }
+      50%       { box-shadow: 0 0 0 5px rgba(184,134,11,0); }
+    }
+
+    /* ── result / download section ───────────────────────────────── */
+    .result-section {
+      display: none;
+      margin-top: 22px;
+    }
+    .result-section.visible { display: block; }
+
+    .result-success {
+      background: #F0FAF4;
+      border: 1px solid #A8D5B8;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .result-success .check {
+      width: 36px; height: 36px;
+      background: var(--success);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      color: var(--white);
+      font-size: 16px;
+    }
+    .result-success .info { flex: 1; min-width: 0; }
+    .result-success .info strong {
+      display: block; font-size: 13px; color: var(--success); font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .result-success .info span {
+      font-size: 12px; color: var(--muted);
+    }
+
+    .btn-download {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #1A6640 0%, #20834F 100%);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .4px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .2s, transform .1s;
+      margin-bottom: 10px;
+    }
+    .btn-download:hover { opacity: .88; transform: translateY(-1px); }
+
+    .btn-reset {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .btn-reset:hover { background: var(--bg); color: var(--ink); }
+
+    /* ── error box ───────────────────────────────────────────────── */
+    .error-box {
+      display: none;
+      background: #FFF0EE;
+      border: 1px solid #F5B7B1;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-top: 18px;
+    }
+    .error-box.visible { display: block; }
+    .error-box .err-title {
+      font-size: 12px; font-weight: 600; color: var(--error);
+      letter-spacing: .5px; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .error-box .err-msg {
+      font-size: 12px; color: #7B2020; white-space: pre-wrap; line-height: 1.6;
+    }
+
+    /* ── footer ──────────────────────────────────────────────────── */
+    footer {
+      padding: 18px 40px;
+      text-align: center;
+      font-size: 11px;
+      color: #9CA3AF;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── responsive ──────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      header { padding: 0 20px; }
+      .card-head, .card-body { padding: 24px 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── header ──────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">A</div>
+    <div>
+      <div class="logo-text">Aditya Birla Jewellery</div>
+      <div class="logo-sub">ERP Data Operations</div>
+    </div>
+  </div>
+  <div class="header-badge">PR Validation</div>
+</header>
+
+<!-- ── main ────────────────────────────────────────────────────────── -->
+<main>
+  <div class="card">
+
+    <!-- card header -->
+    <div class="card-head">
+      <h1>Purchase Requisition<br><span>Lookup & Validation</span></h1>
+      <p>Upload your PR file to cross-validate against the Set Master. Download the enriched report with duplicate flags and SMC data.</p>
+    </div>
+
+    <!-- card body -->
+    <div class="card-body">
+
+      <!-- advisory notice -->
+      <div class="advisory-notice">
+        <div class="adv-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="adv-text">
+          <strong>Kindly use the prescribed upload format only</strong>
+          Uploading an incompatible file will be flagged and rejected.
+        </div>
+      </div>
+
+      <!-- drop zone -->
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".xlsx" />
+        <div class="drop-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="primary-text">Drop your PR file here</div>
+        <div class="secondary-text">or click to browse — .xlsx only</div>
+      </div>
+
+      <!-- file pill -->
+      <div class="file-pill" id="filePill">
+        <svg width="16" height="16" fill="none" stroke="#1A2744" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span class="file-name" id="fileName">—</span>
+        <button class="remove-btn" id="removeBtn" title="Remove file">×</button>
+      </div>
+
+      <!-- process button -->
+      <button class="btn-process" id="processBtn" disabled>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        Process File
+      </button>
+
+      <!-- progress -->
+      <div class="progress-section" id="progressSection">
+        <div class="progress-label">
+          <span id="progressLabel">Processing…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-steps" id="progressSteps"></div>
+      </div>
+
+      <!-- result -->
+      <div class="result-section" id="resultSection">
+        <div class="result-success">
+          <div class="check">✓</div>
+          <div class="info">
+            <strong>Report ready</strong>
+            <span id="resultMeta">—</span>
+          </div>
+        </div>
+        <button class="btn-download" id="downloadBtn">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Report
+        </button>
+        <button class="btn-reset" id="resetBtn">Process another file</button>
+      </div>
+
+      <!-- error -->
+      <div class="error-box" id="errorBox">
+        <div class="err-title">Error</div>
+        <div class="err-msg" id="errorMsg"></div>
+      </div>
+
+    </div><!-- /card-body -->
+  </div><!-- /card -->
+</main>
+
+<footer>
+  Aditya Birla Jewellery &nbsp;·&nbsp; Set Master Validation Suite &nbsp;·&nbsp; Internal Tool
+</footer>
+
+<!-- ── format error modal ──────────────────────────────────────────── -->
+<div class="fmt-error-overlay" id="fmtErrorOverlay">
+  <div class="fmt-error-box">
+    <div class="err-badge">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+      </svg>
+    </div>
+    <h3>ERROR! — Invalid Format Detected</h3>
+    <p>The uploaded file does not match the prescribed format.<br>Please use the correct PR upload template and try again.</p>
+    <button class="btn-dismiss" id="fmtDismissBtn">OK, Got It</button>
+  </div>
+</div>
+
+<script>
+// ── constants ────────────────────────────────────────────────────────────────
+const STEPS = [
+  { id:'s1', label:'Validating file format'    },
+  { id:'s2', label:'Fetching Set Master data'  },
+  { id:'s3', label:'Running PR lookup logic'   },
+  { id:'s4', label:'Generating Excel report'   },
+  { id:'s5', label:'Preparing download'        },
+];
+
+// ── build steps ───────────────────────────────────────────────────────────────
+const stepsEl = document.getElementById('progressSteps');
+STEPS.forEach(s => {
+  const div = document.createElement('div');
+  div.className = 'step';
+  div.id = s.id;
+  div.innerHTML = `<div class="step-dot"></div><span>${s.label}</span>`;
+  stepsEl.appendChild(div);
+});
+
+// ── state ─────────────────────────────────────────────────────────────────────
+let selectedFile = null;
+let resultBlob   = null;
+let resultName   = 'PR_Lookup.xlsx';
+
+// ── elements ──────────────────────────────────────────────────────────────────
+const dropZone    = document.getElementById('dropZone');
+const fileInput   = document.getElementById('fileInput');
+const filePill    = document.getElementById('filePill');
+const fileName    = document.getElementById('fileName');
+const removeBtn   = document.getElementById('removeBtn');
+const processBtn  = document.getElementById('processBtn');
+const progressSec = document.getElementById('progressSection');
+const progressBar = document.getElementById('progressBar');
+const progressLbl = document.getElementById('progressLabel');
+const progressPct = document.getElementById('progressPct');
+const resultSec   = document.getElementById('resultSection');
+const resultMeta  = document.getElementById('resultMeta');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn    = document.getElementById('resetBtn');
+const errorBox    = document.getElementById('errorBox');
+const errorMsg    = document.getElementById('errorMsg');
+const fmtOverlay  = document.getElementById('fmtErrorOverlay');
+const fmtDismiss  = document.getElementById('fmtDismissBtn');
+
+fmtDismiss.addEventListener('click', () => {
+  fmtOverlay.classList.remove('visible');
+  resetAll();
+});
+fmtOverlay.addEventListener('click', e => {
+  if (e.target === fmtOverlay) { fmtOverlay.classList.remove('visible'); resetAll(); }
+});
+
+// ── file selection ────────────────────────────────────────────────────────────
+function setFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.xlsx')) {
+    showError('Only .xlsx files are accepted.');
+    return;
+  }
+  selectedFile = file;
+  fileName.textContent = file.name;
+  filePill.classList.add('visible');
+  dropZone.style.display = 'none';
+  processBtn.disabled = false;
+  hideError();
+  resultSec.classList.remove('visible');
+  progressSec.classList.remove('visible');
+}
+
+fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  setFile(e.dataTransfer.files[0]);
+});
+
+removeBtn.addEventListener('click', resetAll);
+
+// ── progress helpers ──────────────────────────────────────────────────────────
+function setProgress(pct, label) {
+  progressBar.style.width = pct + '%';
+  progressLbl.textContent = label;
+  progressPct.textContent = pct + '%';
+}
+
+function activateStep(stepId) {
+  STEPS.forEach(s => {
+    const el = document.getElementById(s.id);
+    const idx = STEPS.findIndex(x => x.id === stepId);
+    const cur = STEPS.findIndex(x => x.id === s.id);
+    if (cur < idx)       { el.classList.remove('active'); el.classList.add('done'); el.querySelector('.step-dot').textContent = '✓'; }
+    else if (cur === idx){ el.classList.add('active'); el.classList.remove('done'); el.querySelector('.step-dot').textContent = ''; }
+    else                 { el.classList.remove('active','done'); el.querySelector('.step-dot').textContent = ''; }
+  });
+}
+
+function allStepsDone() {
+  STEPS.forEach(s => {
+    const el = document.getElementById(s.id);
+    el.classList.remove('active'); el.classList.add('done');
+    el.querySelector('.step-dot').textContent = '✓';
+  });
+}
+
+// ── show / hide helpers ───────────────────────────────────────────────────────
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorBox.classList.add('visible');
+}
+function hideError() { errorBox.classList.remove('visible'); }
+
+function resetAll() {
+  selectedFile = null;
+  resultBlob   = null;
+  fileInput.value = '';
+  filePill.classList.remove('visible');
+  dropZone.style.display = '';
+  processBtn.disabled = true;
+  progressSec.classList.remove('visible');
+  resultSec.classList.remove('visible');
+  hideError();
+  setProgress(0,'');
+  STEPS.forEach(s => {
+    const el = document.getElementById(s.id);
+    el.classList.remove('active','done');
+    el.querySelector('.step-dot').textContent = '';
+  });
+}
+
+// ── process ───────────────────────────────────────────────────────────────────
+processBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+
+  // UI lock
+  processBtn.disabled = true;
+  hideError();
+  resultSec.classList.remove('visible');
+  progressSec.classList.add('visible');
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  // Animated steps (simulated timing; real time is server-side)
+  const stepTimings = [0, 400, 1200, 2200, 3600];  // ms offsets
+  const pctStops    = [5,  20,   45,   75,   92];
+
+  stepTimings.forEach((delay, i) => {
+    setTimeout(() => {
+      activateStep(STEPS[i].id);
+      setProgress(pctStops[i], STEPS[i].label + '…');
+    }, delay);
+  });
+
+  try {
+    const resp = await fetch('/process', { method: 'POST', body: fd });
+
+    if (!resp.ok) {
+      let errCode = '';
+      try { const j = await resp.json(); errCode = j.error || ''; } catch (_) {}
+      if (errCode === 'INVALID_FORMAT') {
+        progressSec.classList.remove('visible');
+        processBtn.disabled = false;
+        fmtOverlay.classList.add('visible');
+        return;
+      }
+      throw new Error(errCode || 'Processing failed.');
+    }
+
+    // success
+    resultBlob = await resp.blob();
+    const cd   = resp.headers.get('Content-Disposition') || '';
+    const m    = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    resultName = m ? m[1].replace(/['"]/g,'') : selectedFile.name.replace('.xlsx','_Lookup.xlsx');
+
+    allStepsDone();
+    setProgress(100, 'Complete');
+
+    setTimeout(() => {
+      progressSec.classList.remove('visible');
+      resultMeta.textContent = resultName;
+      resultSec.classList.add('visible');
+    }, 600);
+
+  } catch (err) {
+    progressSec.classList.remove('visible');
+    processBtn.disabled = false;
+    showError(err.message);
+  }
+});
+
+// ── download ──────────────────────────────────────────────────────────────────
+downloadBtn.addEventListener('click', () => {
+  if (!resultBlob) return;
+  const url = URL.createObjectURL(resultBlob);
+  const a   = document.createElement('a');
+  a.href = url;
+  a.download = resultName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+resetBtn.addEventListener('click', resetAll);
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: pr-lookup
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: AZURE_SMC_URL
+        value: https://njlprodimages.blob.core.windows.net/protopisfolder/Set_Master_Combined.parquet
+      - key: PYTHON_VERSION
+        value: 3.11.0
